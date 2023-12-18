@@ -1,0 +1,8 @@
+Package:cmdb-exporter
+Version:version
+Section:utils
+Architecture:amd64
+Depends:nvme-cli,smartmontools,ipmitool
+Recommends:nvme-cli,smartmontools,ipmitool
+Maintainer:[url=mailto:xin.liu@high-flyer.cn]xin.liu#high-flyer.cn
+Description:BK CMDB hw collector
