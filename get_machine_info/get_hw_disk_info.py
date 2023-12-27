@@ -72,20 +72,25 @@ class GetHwDiskInfo:
 
                 disk_info_list.append(my_hw_disk_info_model.model_dump())
 
+        # todo:获取sata硬盘的数据要重写
         def get_sata_disk_info():
             #  获取sata 设备列表
             sata_info_ori_list = subprocess.getoutput(
-                "lsblk -d -e 259 -n -o NAME"
-            ).split("\n")
-            # 过滤掉设备列表中以非sd开头的元素
-            sata_info_list = list(
-                filter(lambda x: x.startswith("sd"), sata_info_ori_list)
-            )
+                "lsblk -d -o TRAN,PATH,TYPE"
+            ).split("\n")[:-1]
 
-            for sata_dev in sata_info_list:
+            sata_disk_path_list = [
+                disk.split()[1]
+                for disk in sata_info_ori_list
+                if disk.split()[-1] == "disk"
+                and disk.split()[0] != "nvme"
+                and disk.split()[0] == "sata"
+            ]
+
+            for sata_disk_path in sata_disk_path_list:
                 my_hw_disk_info_model = HwDiskInfoModel()
                 # 获取硬盘位置
-                my_hw_disk_info_model.dev_name = f"/dev/{sata_dev}"
+                my_hw_disk_info_model.dev_name = sata_disk_path
                 # 查询smart信息
                 sata_dev_dict = json.loads(
                     subprocess.getoutput(
@@ -120,8 +125,35 @@ class GetHwDiskInfo:
 
                 disk_info_list.append(my_hw_disk_info_model.model_dump())
 
+        def get_sas_disk_info():
+            process = subprocess.Popen(
+                "lsblk -d -o TRAN,SERIAL,PATH,MODEL,SIZE,VENDOR,TYPE",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=True,
+            )
+            output, error = process.communicate()
+            lsblk_info_ori_list = output.decode("utf-8").split("\n")[:-1]
+            disk_ori_list = [
+                disk.split()
+                for disk in lsblk_info_ori_list
+                if disk.split()[-1] == "disk"
+                and disk.split()[0] != "nvme"
+                and disk.split()[0] != "sata"
+            ]
+            for sas_disk_info_list in disk_ori_list:
+                print(sas_disk_info_list)
+                my_hw_disk_info_model = HwDiskInfoModel()
+                my_hw_disk_info_model.name = sas_disk_info_list[0]
+                my_hw_disk_info_model.dev_name = sas_disk_info_list[1]
+                my_hw_disk_info_model.pn = sas_disk_info_list[2]
+                my_hw_disk_info_model.size = sas_disk_info_list[3]
+                my_hw_disk_info_model.vendor = sas_disk_info_list[4]
+                disk_info_list.append(my_hw_disk_info_model.model_dump())
+
         get_nvme_disk_info()
         get_sata_disk_info()
+        get_sas_disk_info()
 
         final_dict = {
             "plugin_name": self.__class__.__name__,
