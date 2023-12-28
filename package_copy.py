@@ -4,7 +4,6 @@
 # author: xin.liu
 # email: xin.liu@high-flyer.cn
 
-import datetime
 import subprocess
 
 # 导入线程池
@@ -24,20 +23,23 @@ def check_bin_dir():
 
 def compile(src_file_path, output_file_path):
     # 编译文件
+
     res = subprocess.getoutput(
-        f"nuitka3 --onefile  --standalone  --lto=no   -j 8 -o {output_file_path}  {src_file_path}"
+        f"nuitka3 --onefile  --standalone  --lto=no   -j 8  -o {output_file_path}  {src_file_path}"
     )
+
     print(res)
     res = subprocess.getoutput(f"mv {output_file_path} bin/")
     print(res)
 
 
 def package_and_copy():
-    my_time = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-    res = subprocess.getoutput(f"tar -zcvf bin_{my_time}.tgz bin")
+    print("开始打包")
+    res = subprocess.getoutput(f"tar -zcvf bin.tgz bin")
     print(res)
     print("打包完成")
-    res = subprocess.getoutput(f"sudo cp bin_{my_time}.tgz  /mnt/smb/")
+    print("开始复制")
+    res = subprocess.getoutput(f"cp bin.tgz  /mnt/smb/")
     print(res)
     print("复制完成")
 
@@ -49,5 +51,5 @@ if __name__ == "__main__":
         for src_file_path in Path("get_machine_info").glob("*.py"):
             output_file_path = Path((src_file_path.name[:-3]))
             pool.submit(compile, src_file_path, output_file_path)
-        print("编译完成开始 打包复制")
+        print("编译任务已提交请等待...")
     package_and_copy()

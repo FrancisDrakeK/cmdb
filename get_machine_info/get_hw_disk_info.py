@@ -3,8 +3,10 @@
 # @File    : get_hw_disk_info.py
 # @Time    : 23-3-3 PM 3:00
 # @Email   : xin.liu@high-flyer.cn
-# @Description : 23-9-25 重构完成&测试通过
-# @Cmd : nvme,smartctl,lsblk
+# @Description :
+# 23-9-25 重构完成&测试通过
+# 24-1-2 新增对 SATA,SAS，NVME 的独立获取方法
+# @Cmd : lsblk，nvme,smartctl
 import json
 import re
 import subprocess
@@ -39,6 +41,9 @@ class GetHwDiskInfo:
                 shell=True,
             )
             output, error = process.communicate()
+            if "command not found" in error.decode("utf-8"):
+                return None
+
             nvme_info_ori_dict = json.loads(output.decode("utf-8"))
 
             def get_disk_pn_and_vendor(hw_disk_info_model, nvme_dict):
@@ -72,12 +77,11 @@ class GetHwDiskInfo:
 
                 disk_info_list.append(my_hw_disk_info_model.model_dump())
 
-        # todo:获取sata硬盘的数据要重写
         def get_sata_disk_info():
             #  获取sata 设备列表
             sata_info_ori_list = subprocess.getoutput(
                 "lsblk -d -o TRAN,PATH,TYPE"
-            ).split("\n")[:-1]
+            ).split("\n")
 
             sata_disk_path_list = [
                 disk.split()[1]
@@ -92,11 +96,17 @@ class GetHwDiskInfo:
                 # 获取硬盘位置
                 my_hw_disk_info_model.dev_name = sata_disk_path
                 # 查询smart信息
-                sata_dev_dict = json.loads(
-                    subprocess.getoutput(
-                        f"sudo smartctl -j -a {my_hw_disk_info_model.dev_name}"
-                    )
+                process = subprocess.Popen(
+                    f"sudo smartctl -j -a {my_hw_disk_info_model.dev_name}",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True,
                 )
+                output, error = process.communicate()
+                if "command not found" in error.decode("utf-8"):
+                    return None
+
+                sata_dev_dict = json.loads(output.decode("utf-8"))
 
                 # 防止出现 product不存在:
                 if "product" in sata_dev_dict.keys():
@@ -142,7 +152,6 @@ class GetHwDiskInfo:
                 and disk.split()[0] != "sata"
             ]
             for sas_disk_info_list in disk_ori_list:
-                print(sas_disk_info_list)
                 my_hw_disk_info_model = HwDiskInfoModel()
                 my_hw_disk_info_model.name = sas_disk_info_list[0]
                 my_hw_disk_info_model.dev_name = sas_disk_info_list[1]
@@ -166,7 +175,7 @@ class GetHwDiskInfo:
 if __name__ == "__main__":
     get_host_info = GetHwDiskInfo().get_disk_info()
     # 重构返回json结构
-    # 获取contians 中的 list
+    # 获取contains 中的 list
     data_list = get_host_info["contains"]
     # 再存入新列表
     new_list = []
