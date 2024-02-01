@@ -43,8 +43,10 @@ class GetHwDiskInfo:
             output, error = process.communicate()
             if "command not found" in error.decode("utf-8"):
                 return None
-
-            nvme_info_ori_dict = json.loads(output.decode("utf-8"))
+            if output.decode("utf-8"):
+                nvme_info_ori_dict = json.loads(output.decode("utf-8"))
+            else:
+                return None
 
             def get_disk_pn_and_vendor(hw_disk_info_model, nvme_dict):
                 pn = nvme_dict["ModelNumber"]
