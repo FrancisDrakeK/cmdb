@@ -51,5 +51,12 @@ if __name__ == "__main__":
         for src_file_path in Path("get_machine_info").glob("*.py"):
             output_file_path = Path((src_file_path.name[:-3]))
             pool.submit(compile, src_file_path, output_file_path)
+
+        src_file_path = Path("get_machine_info_from_huaweicloud").joinpath(
+            "get_machine_info_from_huaweicloud.py"
+        )
+        output_file_path = Path((src_file_path.name[:-3]))
+        pool.submit(compile, src_file_path, output_file_path)
+
         print("编译任务已提交请等待...")
     package_and_copy()
